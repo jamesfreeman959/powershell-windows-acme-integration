@@ -1,12 +1,16 @@
-New-Item -Path "C:\Cert" -ItemType Directory
-Copy-Item -Path "AutoRenewal.ps1" -Destination "C:\cert"
+$directoryPath = "C:\cert"
+# Check if the directory exists
+if (-not (Test-Path -Path $directoryPath)) {
+    # Directory does not exist, so create it
+    New-Item -Path $directoryPath -ItemType Directory
+    Write-Output "Directory created at $directoryPath"
+} else {
+    Write-Output "Directory already exists at $directoryPath"
+}
+Copy-Item -Path "installcert.ps1" -Destination "C:\cert"
+Copy-Item -Path "plugin-variables.ps1" -Destination "C:\cert"
 
-# Prompt for credentials (username and password)
-$credential = Get-Credential
+$Trigger = New-ScheduledTaskTrigger -At 02:00am -Daily
+$Action= New-ScheduledTaskAction -Execute "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -Argument '-executionpolicy bypass -file "C:\Cert\installcert.ps1"'
+Register-ScheduledTask -TaskName "Certificate AutoRenewal" -Action $Action -Trigger $Trigger -User "NT AUTHORITY\SYSTEM" -RunLevel Highest -Force
 
-# Extract the password as a SecureString
-$password = $credential.Password
-
-$Trigger = New-ScheduledTaskTrigger -At 10:00am -Daily
-$Action= New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "C:\Cert\AutoRenewal.ps1"
-Register-ScheduledTask -TaskName "Certificate AutoRenewal" -Trigger $Trigger -User $credential.UserName -Password $credential.GetNetworkCredential().Password -Action $Action -RunLevel Highest -Force

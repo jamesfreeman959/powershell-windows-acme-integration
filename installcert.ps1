@@ -1,3 +1,6 @@
+# For debugging (especially schedules)
+#Start-Transcript -OutputDirectory C:\cert 
+
 # Get the FQDN of the system
 $fqdn =  [System.Net.DNS]::GetHostByName('').HostName
 
