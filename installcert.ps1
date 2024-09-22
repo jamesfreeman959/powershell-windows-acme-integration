@@ -10,6 +10,44 @@ $thumbprintPath = "C:\Cert\$fqdn-thumbprint.txt"
 $contactEmail = 'sysadmin@hkskies.com'
 $pluginVarsFile = Join-Path -Path $PSScriptRoot -ChildPath 'plugin-variables.ps1'
 
+# Check if running elevated - the script will fail in unexpected ways otherwise
+$isElevated = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+if (-not $isElevated) {
+    Write-Output "Script is not running as Administrator. Restarting with elevated privileges..."
+
+    # Relaunch the script with elevated privileges
+    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$($MyInvocation.MyCommand.Path)`"" -Verb RunAs
+    exit
+} else {
+    Write-Output "Script is running with elevated privileges. Continuing..."
+}
+
+# We need to check Posh-ACME is set up - otherwise we'll hit errors later on
+# Define the list of file paths to check
+$filePaths = @(
+    "$directoryPath\current-server.txt",
+    "$directoryPath\LE_PROD\current-account.txt"
+)
+
+# Loop through each file path in the list
+foreach ($file in $filePaths) {
+    # Check if the file exists
+    if (-not (Test-Path -Path $file)) {
+        Write-Output "File not found: $file. Posh-ACME may not be set up correctly."
+		Write-Output "Consider running:"
+		Write-Output "PS> Install-Module Posh-ACME"
+		Write-Output "PS> Set-PAServer"
+		Write-Output "PS> New-PAAccount -Contact <your_email> -AcceptTOS"
+        exit 1  # Exit with a non-zero code to indicate failure
+    } else {
+	    Write-Output "Found $file - continuing..."
+	}
+}
+
+# If all files exist, continue the script
+Write-Output "All files exist. Continuing script..."
+
 if (Test-Path -Path $pluginVarsFile) {
 	. $pluginVarsFile
 	Write-Output $pArgs
